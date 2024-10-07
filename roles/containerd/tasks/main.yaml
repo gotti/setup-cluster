@@ -1,0 +1,42 @@
+---
+
+- name: check containerd version
+  shell: containerd -h | grep -oP "v\d+\.\d+\.\d+"
+  register: containerd_version_check
+  ignore_errors: yes
+
+- name: msg
+  debug:
+    msg: "installed containerd version is {{ containerd_version_check.stdout }}"
+
+- name: delete containerd when version is not matched
+  shell: |
+    sudo systemctl disable --now containerd
+    sudo rm -rf /usr/local/bin/containerd
+    sudo rm -rf /etc/systemd/system/containerd.service
+  when: containerd_version_check.stdout != "v{{ containerd_version }}"
+
+- name: install containerd
+  shell: |
+    curl -Lo containerd.tar.gz https://github.com/containerd/containerd/releases/download/v{{ containerd_version }}/containerd-{{ containerd_version }}-linux-amd64.tar.gz
+    tar -xvf containerd.tar.gz
+    sudo cp bin/* /usr/local/bin/
+  when: containerd_version_check.stdout != "v{{ containerd_version }}"
+
+- name: configure containerd systemd
+  shell: |
+    curl -Lo containerd.service https://raw.githubusercontent.com/containerd/containerd/main/containerd.service
+    sudo mv containerd.service /etc/systemd/system/
+    sudo systemctl daemon-reload
+    sudo systemctl enable --now containerd
+  when: containerd_version_check.stdout != "v{{ containerd_version }}"
+
+- name: install nerdctl
+  shell: |
+    curl -Lo nerdctl.tar.gz https://github.com/containerd/nerdctl/releases/download/v{{ nerdctl_version }}/nerdctl-{{ nerdctl_version }}-linux-amd64.tar.gz
+    sudo tar -xvf nerdctl.tar.gz -C /usr/local/bin/
+
+- name: install runc
+  shell: |
+    curl -Lo runc https://github.com/opencontainers/runc/releases/download/v{{ runc_version }}/runc.amd64
+    sudo install -m 755 runc /usr/local/sbin/runc

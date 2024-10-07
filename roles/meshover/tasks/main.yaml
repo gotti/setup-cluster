@@ -1,0 +1,29 @@
+---
+
+- name: check meshover already downloaded(exists directory named meshover)
+  shell: |
+    if [ -d meshover ]; then
+      echo "installed"
+    else
+      echo "not_installed"
+    fi
+  register: meshover_check
+  ignore_errors: yes
+
+- name: download meshover when not installed
+  shell: |
+    git clone https://github.com/gotti/meshover
+  when: meshover_check.stdout == "not_installed"
+
+- name: pull meshover
+  shell: |
+    cd meshover
+    git pull
+
+- name: build and install meshover
+  shell: |
+    cd meshover
+    go build -o meshover cmd/client/main.go
+    sudo cp meshover /usr/local/bin/
+  args:
+    executable: /bin/bash

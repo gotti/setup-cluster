@@ -1,0 +1,7 @@
+---
+
+- hosts: all
+  roles:
+    - containerd
+    - golang
+    - meshover
